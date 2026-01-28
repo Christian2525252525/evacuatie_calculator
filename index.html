@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1565C0" />
+    <meta name="description" content="BBL Art. 4.80/4.81 - Berekening opvang- en doorstroomcapaciteit trappenhuizen" />
+    <title>Evacuatie Calculator - BBL 4.80/4.81</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1565C0;
+            --primary-light: #42A5F5;
+            --primary-dark: #0D47A1;
+            --accent: #FF6F00;
+            --success: #2E7D32;
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --text: #2d3748;
+            --text-light: #718096;
+            --border: #e2e8f0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(21,101,192,0.3);
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            background: white;
+            padding: 0.5rem;
+            border-radius: 12px;
+        }
+        .header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+        .header p { opacity: 0.9; font-size: 0.9rem; }
+        .main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+        }
+        .card h2 {
+            color: var(--primary);
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--primary);
+        }
+        .form-section { margin-bottom: 1.5rem; }
+        .form-section h3 {
+            font-size: 0.875rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .form-group small { display: block; color: var(--text-light); font-size: 0.75rem; margin-top: 0.25rem; }
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(21,101,192,0.1);
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(21,101,192,0.4);
+        }
+        .result-card {
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .result-primary {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border: 2px solid var(--primary);
+        }
+        .result-secondary {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border: 2px solid var(--accent);
+        }
+        .result-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+        }
+        .result-value {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+        .result-secondary .result-value { color: var(--accent); }
+        .result-sub { font-size: 0.8rem; color: var(--text-light); }
+        .details { background: var(--bg); border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+        .details h3 { font-size: 0.9rem; color: var(--primary); margin-bottom: 0.75rem; }
+        .details table { width: 100%; border-collapse: collapse; }
+        .details td { padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        .details td:last-child { text-align: right; }
+        .highlight td { background: #fff3cd; padding: 0.5rem; border-radius: 4px; }
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin-top: 1rem;
+        }
+        .info-box h4 { color: var(--primary); margin-bottom: 0.5rem; }
+        .info-box p { font-size: 0.85rem; margin-bottom: 0.5rem; }
+        .empty { text-align: center; padding: 3rem; color: var(--text-light); }
+        .footer {
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        @media (max-width: 768px) { .info-grid { grid-template-columns: 1fr; } }
+        .info-grid h4 { color: var(--primary); font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .info-grid ul { list-style: none; font-size: 0.85rem; }
+        .info-grid li { padding: 0.25rem 0; color: var(--text-light); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg viewBox="0 0 64 64" width="48" height="48">
+                    <rect x="12" y="16" width="40" height="44" fill="#1565C0" rx="2"/>
+                    <rect x="16" y="20" width="8" height="6" fill="#E3F2FD" rx="1"/>
+                    <rect x="28" y="20" width="8" height="6" fill="#E3F2FD" rx="1"/>
+                    <rect x="40" y="20" width="8" height="6" fill="#E3F2FD" rx="1"/>
+                    <rect x="16" y="30" width="8" height="6" fill="#E3F2FD" rx="1"/>
+                    <rect x="28" y="30" width="8" height="6" fill="#E3F2FD" rx="1"/>
+                    <rect x="40" y="30" width="8" height="6" fill="#E3F2FD" rx="1"/>
+                    <rect x="26" y="50" width="12" height="10" fill="#0D47A1" rx="1"/>
+                    <path d="M54 48 L58 48 L58 52 L62 52 L62 56 L54 56 Z" fill="#FF6F00"/>
+                    <path d="M56 36 L62 42 L59 42 L59 46 L53 46 L53 42 L50 42 Z" fill="#2E7D32"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Evacuatie Calculator</h1>
+                <p>BBL Art. 4.80/4.81 - Opvang- en doorstroomcapaciteit trappenhuizen</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="grid">
+            <div class="card">
+                <h2>Invoer</h2>
+                <form id="calcForm">
+                    <div class="form-section">
+                        <h3>Trappenhuis uitgang</h3>
+                        <div class="form-group">
+                            <label>Breedte uitgang (m)</label>
+                            <input type="number" id="doorgang_uitgang" value="1.2" step="0.05" min="0.5" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Type uitgang</label>
+                            <select id="type_uitgang">
+                                <option value="45">Enkele deur &lt; 1.2m (45 p/m/min)</option>
+                                <option value="90" selected>Dubbele deur &gt;= 1.2m (90 p/m/min)</option>
+                                <option value="90">Vrije doorgang (90 p/m/min)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Type vluchtroute</label>
+                            <select id="locatie">
+                                <option value="30">Veiligheidsvluchtroute (30 min)</option>
+                                <option value="20">Extra beschermde vluchtroute (20 min)</option>
+                                <option value="15" selected>Beschermde vluchtroute (15 min)</option>
+                            </select>
+                            <small>Bepaalt maximale ontruimingstijd</small>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Trappenhuis eigenschappen</h3>
+                        <div class="form-group">
+                            <label>Breedte trap (m)</label>
+                            <input type="number" id="breedte_trap" value="1.1" step="0.05" min="0.8" max="3">
+                        </div>
+                        <div class="form-group">
+                            <label>Oppervlakte bordes (m²)</label>
+                            <input type="number" id="oppervlakte_bordes" value="2.0" step="0.5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Aantal treden per etage</label>
+                            <input type="number" id="aantal_treden" value="20" min="10" max="40">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>Toegang per verdieping</h3>
+                        <div class="form-group">
+                            <label>Breedte toegangsdeur (m)</label>
+                            <input type="number" id="doorgang_deur" value="0.85" step="0.05" min="0.5" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Type toegangsdeur</label>
+                            <select id="type_deur">
+                                <option value="45" selected>Enkele deur &lt; 1.2m (45 p/m/min)</option>
+                                <option value="90">Dubbele deur &gt;= 1.2m (90 p/m/min)</option>
+                                <option value="90">Vrije doorgang (90 p/m/min)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Bereken capaciteit</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Resultaten</h2>
+                <div id="results" class="empty">
+                    <p>Vul de gegevens in en klik op "Bereken capaciteit"</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>BBL Standaardwaarden</h2>
+            <div class="info-grid">
+                <div>
+                    <h4>Doorstroomcapaciteit</h4>
+                    <ul>
+                        <li>Enkele deur (&lt;1.2m): <strong>45 pers/m/min</strong></li>
+                        <li>Dubbele deur/vrij: <strong>90 pers/m/min</strong></li>
+                        <li>Trap: <strong>60 pers/m/min</strong></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Opvangcapaciteit</h4>
+                    <ul>
+                        <li>Bordes: <strong>3 pers/m²</strong></li>
+                        <li>Treden: <strong>2 pers/trede/m breedte</strong></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Ontruimingstijden (Art. 4.81 lid 1)</h4>
+                    <ul>
+                        <li>Veiligheidsvluchtroute: <strong>30 min</strong></li>
+                        <li>Extra beschermd: <strong>20 min</strong></li>
+                        <li>Beschermd: <strong>15 min</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Evacuatie Calculator - BBL Art. 4.80/4.81 | Opvang- en doorstroomcapaciteit trappenhuizen</p>
+    </footer>
+
+    <script>
+        document.getElementById('calcForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Lees invoer
+            const doorgangUitgang = parseFloat(document.getElementById('doorgang_uitgang').value);
+            const typeUitgang = parseFloat(document.getElementById('type_uitgang').value);
+            const ontruimingstijd = parseFloat(document.getElementById('locatie').value);
+            const breedteTrap = parseFloat(document.getElementById('breedte_trap').value);
+            const oppervlakteBordes = parseFloat(document.getElementById('oppervlakte_bordes').value);
+            const aantalTreden = parseInt(document.getElementById('aantal_treden').value);
+            const doorgangDeur = parseFloat(document.getElementById('doorgang_deur').value);
+            const typeDeur = parseFloat(document.getElementById('type_deur').value);
+
+            // Bereken doorstroom
+            const doorstroomUitgang = doorgangUitgang * typeUitgang;
+            const doorstroomDeur = doorgangDeur * typeDeur;
+            const doorstroomTrap = breedteTrap * 60;
+
+            // Max totaal (BBL lid 1)
+            const maxTotaal = Math.floor(doorstroomUitgang * ontruimingstijd);
+
+            // Opvangcapaciteit (BBL lid 2)
+            const opvangBordes = oppervlakteBordes * 3;
+            const opvangTreden = aantalTreden * breedteTrap * 2;
+            const opvangTotaal = opvangBordes + opvangTreden;
+
+            // Max per verdieping
+            const maxPerVerdieping = Math.floor(Math.min(opvangTotaal, doorstroomDeur));
+
+            // Bottleneck
+            const minDoorstroom = Math.min(doorstroomUitgang, doorstroomDeur, doorstroomTrap);
+            let bottleneck = 'Uitgang trappenhuis';
+            if (minDoorstroom === doorstroomDeur) bottleneck = 'Toegangsdeur verdieping';
+            else if (minDoorstroom === doorstroomTrap) bottleneck = 'Trapbreedte';
+
+            // Toon resultaten
+            document.getElementById('results').innerHTML = `
+                <div class="result-card result-primary">
+                    <div class="result-label">Max personen totaal</div>
+                    <div class="result-value">${maxTotaal}</div>
+                    <div class="result-sub">BBL Art. 4.81 lid 1</div>
+                </div>
+                <div class="result-card result-secondary">
+                    <div class="result-label">Max per verdieping</div>
+                    <div class="result-value">${maxPerVerdieping}</div>
+                    <div class="result-sub">BBL Art. 4.81 lid 2</div>
+                </div>
+                <div class="details">
+                    <h3>Details berekening</h3>
+                    <table>
+                        <tr><td>Ontruimingstijd</td><td><strong>${ontruimingstijd} minuten</strong></td></tr>
+                        <tr><td>Doorstroom uitgang</td><td>${doorstroomUitgang.toFixed(0)} pers/min</td></tr>
+                        <tr><td>Doorstroom toegangsdeur</td><td>${doorstroomDeur.toFixed(0)} pers/min</td></tr>
+                        <tr><td>Doorstroom trap</td><td>${doorstroomTrap.toFixed(0)} pers/min</td></tr>
+                        <tr><td>Opvangcapaciteit/verd.</td><td>${opvangTotaal.toFixed(0)} personen</td></tr>
+                        <tr class="highlight"><td>Bottleneck</td><td><strong>${bottleneck}</strong></td></tr>
+                    </table>
+                </div>
+                <div class="info-box">
+                    <h4>Uitleg</h4>
+                    <p><strong>Max totaal (lid 1):</strong> ${doorstroomUitgang.toFixed(0)} pers/min × ${ontruimingstijd} min = ${maxTotaal} personen kunnen binnen de ontruimingstijd het gebouw verlaten.</p>
+                    <p><strong>Max per verdieping (lid 2):</strong> Minimum van opvangcapaciteit (${opvangTotaal.toFixed(0)}) en doorstroom deur (${doorstroomDeur.toFixed(0)}/min) = ${maxPerVerdieping} personen kunnen binnen 1 minuut het compartiment verlaten.</p>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>
