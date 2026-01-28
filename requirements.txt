@@ -1,0 +1,25 @@
+# Evacuatie Doorstroom Calculator - Dependencies
+# Python 3.10+ vereist
+
+# GUI Framework
+PyQt6>=6.4.0
+PyQt6-Charts>=6.4.0
+
+# Data Processing
+pandas>=1.5.0
+numpy>=1.23.0
+
+# Excel Export
+openpyxl>=3.1.0
+
+# PDF Generation
+reportlab>=4.0.0
+
+# Optioneel: Grafieken in PDF
+matplotlib>=3.6.0
+
+# Development dependencies (optioneel)
+# pytest>=7.0.0
+# pytest-qt>=4.2.0
+# black>=23.0.0
+# flake8>=6.0.0
