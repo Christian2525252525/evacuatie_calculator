@@ -12,6 +12,12 @@ from datetime import date
 import json
 import io
 import google.generativeai as genai
+from fpdf import FPDF
+from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+import pandas as pd
 
 # Import bestaande modules
 from models.constanten import (
@@ -721,7 +727,7 @@ def render_stap4_resultaten():
             )
 
     # Tabs voor verschillende views
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Grafieken", "✅ Normtoetsing", "🤖 AI Advies", "📋 Details"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Grafieken", "✅ Normtoetsing", "🤖 AI Advies", "📋 Details", "📥 Rapport"])
 
     with tab1:
         render_grafieken(resultaten)
@@ -734,6 +740,9 @@ def render_stap4_resultaten():
 
     with tab4:
         render_details(resultaten)
+
+    with tab5:
+        render_rapport_export(resultaten, toetsingen)
 
     # Navigatie
     st.markdown("---")
@@ -938,6 +947,338 @@ def render_ai_advies(resultaten, toetsingen):
         st.caption("*Dit advies is gegenereerd door AI en dient ter indicatie. Raadpleeg altijd een gekwalificeerd adviseur voor definitieve beslissingen.*")
 
 
+def genereer_pdf_rapport(resultaten, toetsingen):
+    """Genereer een PDF rapport van de evacuatieberekening"""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Titel
+    pdf.set_font('Helvetica', 'B', 20)
+    pdf.cell(0, 15, 'Evacuatie Calculator Rapport', ln=True, align='C')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 8, 'BBL Art. 4.80/4.81 - Opvang- en doorstroomcapaciteit', ln=True, align='C')
+    pdf.ln(10)
+
+    # Project informatie
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '1. Projectgegevens', ln=True)
+    pdf.set_font('Helvetica', '', 11)
+
+    project = st.session_state.project
+    pdf.cell(0, 7, f"Projectnaam: {project['projectnaam']}", ln=True)
+    pdf.cell(0, 7, f"Projectnummer: {project['projectnummer']}", ln=True)
+    pdf.cell(0, 7, f"Locatie: {project['locatie']}", ln=True)
+    pdf.cell(0, 7, f"Datum: {project['datum']}", ln=True)
+    pdf.cell(0, 7, f"Aantal bouwlagen: {project['aantal_bouwlagen']}", ln=True)
+    pdf.cell(0, 7, f"Aantal trappenhuizen: {project['aantal_trappen']}", ln=True)
+    pdf.ln(5)
+
+    # Personen per verdieping
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '2. Personen per verdieping', ln=True)
+    pdf.set_font('Helvetica', '', 11)
+
+    totaal_personen = 0
+    for verd, aantal in sorted(st.session_state.personen.items(), key=lambda x: int(x[0]), reverse=True):
+        pdf.cell(0, 7, f"Verdieping {verd}: {aantal} personen", ln=True)
+        totaal_personen += aantal
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.cell(0, 7, f"Totaal: {totaal_personen} personen", ln=True)
+    pdf.ln(5)
+
+    # Trap configuratie
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '3. Trapconfiguratie', ln=True)
+
+    for trap_naam, trap_data in st.session_state.trappen.items():
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, trap_naam, ln=True)
+        pdf.set_font('Helvetica', '', 11)
+        pdf.cell(0, 6, f"  Trapbreedte: {trap_data.get('trapbreedte', '-')} m", ln=True)
+        pdf.cell(0, 6, f"  Uitgang breedte: {trap_data.get('doorgang_uitgang', '-')} m", ln=True)
+        pdf.cell(0, 6, f"  Locatie type: {trap_data.get('locatie', '-')}", ln=True)
+    pdf.ln(5)
+
+    # Resultaten per trap
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '4. Resultaten', ln=True)
+
+    for trap_naam, res in resultaten.items():
+        toets = toetsingen[trap_naam]
+        status = "VOLDOET" if toets.alle_criteria_voldaan else "VOLDOET NIET"
+
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, f"{trap_naam} - {status}", ln=True)
+        pdf.set_font('Helvetica', '', 11)
+        pdf.cell(0, 6, f"  Totaal personen: {res.totaal_personen}", ln=True)
+        pdf.cell(0, 6, f"  Beschikbare ontruimingstijd: {res.ontruimingstijd_min} min", ln=True)
+        pdf.cell(0, 6, f"  Werkelijke ontruimingstijd: {res.voltooide_ontruiming_min or 'niet voltooid'} min", ln=True)
+        pdf.ln(3)
+
+        # Toetsingscriteria
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 7, "  Toetsingscriteria BBL Art. 4.81:", ln=True)
+        pdf.set_font('Helvetica', '', 10)
+
+        for criterium in toets.criteria:
+            status_icon = "[OK]" if criterium.voldoet else "[X]"
+            pdf.cell(0, 6, f"    {status_icon} {criterium.naam}: eis={criterium.eis}, berekend={criterium.berekend:.1f} {criterium.eenheid}", ln=True)
+            if not criterium.voldoet:
+                pdf.set_text_color(180, 0, 0)
+                pdf.cell(0, 5, f"        {criterium.toelichting}", ln=True)
+                pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
+
+    # AI Advies indien beschikbaar
+    if st.session_state.get('ai_advies'):
+        pdf.add_page()
+        pdf.set_font('Helvetica', 'B', 14)
+        pdf.cell(0, 10, '5. AI Advies', ln=True)
+        pdf.set_font('Helvetica', '', 10)
+
+        # Split advies in regels en voeg toe
+        advies_text = st.session_state.ai_advies
+        pdf.multi_cell(0, 6, advies_text)
+        pdf.ln(5)
+        pdf.set_font('Helvetica', 'I', 9)
+        pdf.cell(0, 6, "Dit advies is gegenereerd door AI en dient ter indicatie.", ln=True)
+
+    # Footer
+    pdf.ln(10)
+    pdf.set_font('Helvetica', 'I', 9)
+    pdf.cell(0, 6, f"Gegenereerd met Evacuatie Calculator - {date.today()}", ln=True)
+
+    return pdf.output()
+
+
+def genereer_word_rapport(resultaten, toetsingen):
+    """Genereer een Word rapport van de evacuatieberekening"""
+    doc = Document()
+
+    # Titel
+    title = doc.add_heading('Evacuatie Calculator Rapport', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    subtitle = doc.add_paragraph('BBL Art. 4.80/4.81 - Opvang- en doorstroomcapaciteit')
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Project informatie
+    doc.add_heading('1. Projectgegevens', level=1)
+    project = st.session_state.project
+
+    table = doc.add_table(rows=6, cols=2)
+    table.style = 'Table Grid'
+
+    cells = [
+        ('Projectnaam', project['projectnaam']),
+        ('Projectnummer', project['projectnummer']),
+        ('Locatie', project['locatie']),
+        ('Datum', str(project['datum'])),
+        ('Aantal bouwlagen', str(project['aantal_bouwlagen'])),
+        ('Aantal trappenhuizen', str(project['aantal_trappen'])),
+    ]
+
+    for i, (label, value) in enumerate(cells):
+        table.rows[i].cells[0].text = label
+        table.rows[i].cells[1].text = value
+
+    doc.add_paragraph()
+
+    # Personen per verdieping
+    doc.add_heading('2. Personen per verdieping', level=1)
+
+    personen_sorted = sorted(st.session_state.personen.items(), key=lambda x: int(x[0]), reverse=True)
+    table = doc.add_table(rows=len(personen_sorted) + 1, cols=2)
+    table.style = 'Table Grid'
+
+    table.rows[0].cells[0].text = 'Verdieping'
+    table.rows[0].cells[1].text = 'Aantal personen'
+
+    totaal = 0
+    for i, (verd, aantal) in enumerate(personen_sorted, 1):
+        table.rows[i].cells[0].text = f"Verdieping {verd}"
+        table.rows[i].cells[1].text = str(aantal)
+        totaal += aantal
+
+    doc.add_paragraph(f"Totaal: {totaal} personen", style='Intense Quote')
+
+    # Trap configuratie
+    doc.add_heading('3. Trapconfiguratie', level=1)
+
+    for trap_naam, trap_data in st.session_state.trappen.items():
+        doc.add_heading(trap_naam, level=2)
+
+        table = doc.add_table(rows=3, cols=2)
+        table.style = 'Table Grid'
+
+        table.rows[0].cells[0].text = 'Trapbreedte'
+        table.rows[0].cells[1].text = f"{trap_data.get('trapbreedte', '-')} m"
+        table.rows[1].cells[0].text = 'Uitgang breedte'
+        table.rows[1].cells[1].text = f"{trap_data.get('doorgang_uitgang', '-')} m"
+        table.rows[2].cells[0].text = 'Locatie type'
+        table.rows[2].cells[1].text = str(trap_data.get('locatie', '-'))
+
+    doc.add_page_break()
+
+    # Resultaten
+    doc.add_heading('4. Resultaten', level=1)
+
+    for trap_naam, res in resultaten.items():
+        toets = toetsingen[trap_naam]
+        status = "VOLDOET" if toets.alle_criteria_voldaan else "VOLDOET NIET"
+
+        doc.add_heading(f"{trap_naam} - {status}", level=2)
+
+        # Samenvatting
+        table = doc.add_table(rows=3, cols=2)
+        table.style = 'Table Grid'
+
+        table.rows[0].cells[0].text = 'Totaal personen'
+        table.rows[0].cells[1].text = str(res.totaal_personen)
+        table.rows[1].cells[0].text = 'Beschikbare ontruimingstijd'
+        table.rows[1].cells[1].text = f"{res.ontruimingstijd_min} min"
+        table.rows[2].cells[0].text = 'Werkelijke ontruimingstijd'
+        table.rows[2].cells[1].text = f"{res.voltooide_ontruiming_min or 'niet voltooid'} min"
+
+        doc.add_paragraph()
+        doc.add_paragraph('Toetsingscriteria BBL Art. 4.81:', style='Heading 3')
+
+        # Criteria tabel
+        table = doc.add_table(rows=len(toets.criteria) + 1, cols=4)
+        table.style = 'Table Grid'
+
+        headers = ['Status', 'Criterium', 'Eis', 'Berekend']
+        for i, header in enumerate(headers):
+            table.rows[0].cells[i].text = header
+
+        for i, criterium in enumerate(toets.criteria, 1):
+            status_icon = "OK" if criterium.voldoet else "NIET OK"
+            table.rows[i].cells[0].text = status_icon
+            table.rows[i].cells[1].text = criterium.naam
+            table.rows[i].cells[2].text = f"{criterium.eis} {criterium.eenheid}"
+            table.rows[i].cells[3].text = f"{criterium.berekend:.1f} {criterium.eenheid}"
+
+        doc.add_paragraph()
+
+    # Tijdstap data per trap
+    doc.add_page_break()
+    doc.add_heading('5. Gedetailleerde tijdstapdata', level=1)
+
+    for trap_naam, res in resultaten.items():
+        doc.add_heading(trap_naam, level=2)
+
+        # Beperk tot eerste 20 tijdstappen voor leesbaarheid
+        tijdstappen = res.tijdstappen[:20]
+        table = doc.add_table(rows=len(tijdstappen) + 1, cols=5)
+        table.style = 'Table Grid'
+
+        headers = ['Tijd (min)', 'Naar buiten', 'Cum. buiten', 'In trap', 'Op verd.']
+        for i, header in enumerate(headers):
+            table.rows[0].cells[i].text = header
+
+        for i, ts in enumerate(tijdstappen, 1):
+            table.rows[i].cells[0].text = f"{ts.tijd_min:.1f}"
+            table.rows[i].cells[1].text = f"{ts.naar_buiten:.0f}"
+            table.rows[i].cells[2].text = f"{ts.cumulatief_buiten:.0f}"
+            table.rows[i].cells[3].text = f"{ts.totaal_in_trap:.0f}"
+            table.rows[i].cells[4].text = f"{ts.totaal_op_verdiepingen:.0f}"
+
+        if len(res.tijdstappen) > 20:
+            doc.add_paragraph(f"... en {len(res.tijdstappen) - 20} meer tijdstappen")
+
+        doc.add_paragraph()
+
+    # AI Advies indien beschikbaar
+    if st.session_state.get('ai_advies'):
+        doc.add_page_break()
+        doc.add_heading('6. AI Advies', level=1)
+        doc.add_paragraph(st.session_state.ai_advies)
+        doc.add_paragraph()
+        disclaimer = doc.add_paragraph("Dit advies is gegenereerd door AI en dient ter indicatie. Raadpleeg altijd een gekwalificeerd adviseur voor definitieve beslissingen.")
+        disclaimer.italic = True
+
+    # Footer
+    doc.add_paragraph()
+    footer = doc.add_paragraph(f"Gegenereerd met Evacuatie Calculator - {date.today()}")
+    footer.italic = True
+
+    # Save to bytes
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def render_rapport_export(resultaten, toetsingen):
+    """Render de rapport export sectie"""
+    st.markdown("### 📥 Rapport Exporteren")
+
+    st.markdown("""
+    <div class="info-box">
+        Download een volledig rapport van de evacuatieberekening als PDF of Word document.
+        Het rapport bevat alle projectgegevens, configuratie, resultaten en toetsingen.
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("#### 📄 PDF Rapport")
+        st.markdown("Geschikt voor delen en archiveren.")
+
+        if st.button("📄 Genereer PDF", type="primary", key="gen_pdf"):
+            with st.spinner("PDF genereren..."):
+                try:
+                    pdf_bytes = genereer_pdf_rapport(resultaten, toetsingen)
+                    st.session_state.pdf_rapport = pdf_bytes
+                    st.success("PDF gegenereerd!")
+                except Exception as e:
+                    st.error(f"Fout bij genereren PDF: {str(e)}")
+
+        if st.session_state.get('pdf_rapport'):
+            st.download_button(
+                label="⬇️ Download PDF",
+                data=st.session_state.pdf_rapport,
+                file_name=f"{st.session_state.project['projectnaam']}_rapport.pdf",
+                mime="application/pdf"
+            )
+
+    with col2:
+        st.markdown("#### 📝 Word Rapport")
+        st.markdown("Geschikt voor bewerken en aanpassen.")
+
+        if st.button("📝 Genereer Word", type="primary", key="gen_word"):
+            with st.spinner("Word document genereren..."):
+                try:
+                    word_bytes = genereer_word_rapport(resultaten, toetsingen)
+                    st.session_state.word_rapport = word_bytes
+                    st.success("Word document gegenereerd!")
+                except Exception as e:
+                    st.error(f"Fout bij genereren Word: {str(e)}")
+
+        if st.session_state.get('word_rapport'):
+            st.download_button(
+                label="⬇️ Download Word",
+                data=st.session_state.word_rapport,
+                file_name=f"{st.session_state.project['projectnaam']}_rapport.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
+    st.markdown("---")
+    st.markdown("#### 📋 Wat bevat het rapport?")
+    st.markdown("""
+    - **Projectgegevens**: naam, nummer, locatie, datum
+    - **Gebouwconfiguratie**: verdiepingen, personen per verdieping
+    - **Trapconfiguratie**: afmetingen, type vluchtroute
+    - **Resultaten**: ontruimingstijden per trap
+    - **BBL Toetsing**: alle criteria met status
+    - **Tijdstapdata**: gedetailleerd verloop evacuatie
+    - **AI Advies**: indien gegenereerd
+    """)
+
+
 def render_details(resultaten):
     """Render gedetailleerde resultaten"""
     st.markdown("### 📋 Gedetailleerde tijdstapdata")
@@ -959,7 +1300,6 @@ def render_details(resultaten):
             st.dataframe(data, width="stretch", height=400)
 
             # Download optie
-            import pandas as pd
             df = pd.DataFrame(data)
             csv = df.to_csv(index=False)
             st.download_button(
