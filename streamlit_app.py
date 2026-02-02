@@ -11,6 +11,7 @@ import plotly.express as px
 from datetime import date
 import json
 import io
+import google.generativeai as genai
 
 # Import bestaande modules
 from models.constanten import (
@@ -720,7 +721,7 @@ def render_stap4_resultaten():
             )
 
     # Tabs voor verschillende views
-    tab1, tab2, tab3 = st.tabs(["📊 Grafieken", "✅ Normtoetsing", "📋 Details"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Grafieken", "✅ Normtoetsing", "🤖 AI Advies", "📋 Details"])
 
     with tab1:
         render_grafieken(resultaten)
@@ -729,6 +730,9 @@ def render_stap4_resultaten():
         render_normtoetsing(toetsingen)
 
     with tab3:
+        render_ai_advies(resultaten, toetsingen)
+
+    with tab4:
         render_details(resultaten)
 
     # Navigatie
@@ -840,6 +844,97 @@ def render_normtoetsing(toetsingen):
                         {criterium.toelichting}
                     </div>
                     """, unsafe_allow_html=True)
+
+
+def get_ai_advies(resultaten, toetsingen):
+    """Genereer AI advies met Google Gemini"""
+    try:
+        # Haal API key uit secrets
+        api_key = st.secrets.get("GOOGLE_API_KEY")
+        if not api_key:
+            return None, "API key niet geconfigureerd. Voeg GOOGLE_API_KEY toe aan Streamlit Secrets."
+
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # Bouw context voor AI
+        context = "Je bent een expert in brandveiligheid en evacuatieberekeningen volgens het Nederlandse Besluit bouwwerken leefomgeving (BBL).\n\n"
+        context += "Analyseer de volgende evacuatieberekening en geef praktisch advies:\n\n"
+
+        for trap_naam, res in resultaten.items():
+            toets = toetsingen[trap_naam]
+            context += f"## {trap_naam}\n"
+            context += f"- Totaal personen: {res.totaal_personen}\n"
+            context += f"- Ontruimingstijd beschikbaar: {res.ontruimingstijd_min} minuten\n"
+            context += f"- Werkelijke ontruimingstijd: {res.voltooide_ontruiming_min or 'niet voltooid'} minuten\n"
+            context += f"- Status: {'VOLDOET' if toets.alle_criteria_voldaan else 'VOLDOET NIET'}\n\n"
+
+            for criterium in toets.criteria:
+                status = "✅" if criterium.voldoet else "❌"
+                context += f"  {status} {criterium.naam}: eis={criterium.eis}, berekend={criterium.berekend:.1f}\n"
+                if not criterium.voldoet:
+                    context += f"     Probleem: {criterium.toelichting}\n"
+            context += "\n"
+
+        # Voeg trap configuratie toe
+        if 'trappen' in st.session_state:
+            context += "## Trap Configuratie\n"
+            for trap_naam, trap_data in st.session_state.trappen.items():
+                context += f"### {trap_naam}\n"
+                context += f"- Uitgang breedte: {trap_data.get('doorgang_uitgang', 'onbekend')}m\n"
+                context += f"- Type vluchtroute: {trap_data.get('locatie', 'onbekend')}\n"
+
+        prompt = context + """
+
+Geef concreet advies in het Nederlands:
+1. Samenvatting: voldoet het ontwerp aan BBL Art. 4.81?
+2. Als er problemen zijn: wat zijn de specifieke knelpunten?
+3. Concrete oplossingen met geschatte impact (bijv. "verbreed deur van 0.85m naar 1.2m = +40% capaciteit")
+4. Prioritering: wat heeft de meeste impact?
+
+Houd het praktisch en beknopt (max 300 woorden)."""
+
+        response = model.generate_content(prompt)
+        return response.text, None
+
+    except Exception as e:
+        return None, f"Fout bij AI analyse: {str(e)}"
+
+
+def render_ai_advies(resultaten, toetsingen):
+    """Render AI advies sectie"""
+    st.markdown("### 🤖 AI Advies")
+
+    st.markdown("""
+    <div class="info-box">
+        Krijg automatisch advies van AI over je evacuatieberekening.
+        De AI analyseert de resultaten en geeft concrete verbetervoorstellen.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Check of er al advies is
+    if 'ai_advies' not in st.session_state:
+        st.session_state.ai_advies = None
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("🤖 Genereer AI Advies", type="primary"):
+            with st.spinner("AI analyseert de resultaten..."):
+                advies, error = get_ai_advies(resultaten, toetsingen)
+                if error:
+                    st.error(error)
+                else:
+                    st.session_state.ai_advies = advies
+                    st.rerun()
+
+    # Toon advies als beschikbaar
+    if st.session_state.ai_advies:
+        st.markdown("---")
+        st.markdown("#### 💡 AI Analyse")
+        st.markdown(st.session_state.ai_advies)
+
+        st.markdown("---")
+        st.caption("*Dit advies is gegenereerd door AI en dient ter indicatie. Raadpleeg altijd een gekwalificeerd adviseur voor definitieve beslissingen.*")
 
 
 def render_details(resultaten):
