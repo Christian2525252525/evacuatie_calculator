@@ -1,7 +1,7 @@
 # Evacuatie Calculator - Streamlit Cloud Dependencies
 streamlit>=1.28.0
-plotly>=5.18.0
-pandas>=2.0.0
+plotly
+pandas
 
 # Voor lokale desktop versie (PyQt6) - niet nodig voor web:
 # pip install PyQt6 PyQt6-Charts openpyxl reportlab matplotlib
