@@ -966,12 +966,12 @@ def genereer_pdf_rapport(resultaten, toetsingen):
     pdf.set_font('Helvetica', '', 11)
 
     project = st.session_state.project
-    pdf.cell(0, 7, f"Projectnaam: {project['projectnaam']}", ln=True)
-    pdf.cell(0, 7, f"Projectnummer: {project['projectnummer']}", ln=True)
-    pdf.cell(0, 7, f"Locatie: {project['locatie']}", ln=True)
-    pdf.cell(0, 7, f"Datum: {project['datum']}", ln=True)
-    pdf.cell(0, 7, f"Aantal bouwlagen: {project['aantal_bouwlagen']}", ln=True)
-    pdf.cell(0, 7, f"Aantal trappenhuizen: {project['aantal_trappen']}", ln=True)
+    pdf.cell(0, 7, f"Projectnaam: {project.get('projectnaam', '-')}", ln=True)
+    pdf.cell(0, 7, f"Datum: {project.get('datum', '-')}", ln=True)
+    pdf.cell(0, 7, f"Aantal bouwlagen: {project.get('aantal_bouwlagen', '-')}", ln=True)
+    pdf.cell(0, 7, f"Laagste verdieping: {project.get('laagste_verdieping', 0)}", ln=True)
+    pdf.cell(0, 7, f"Aantal trappenhuizen: {project.get('aantal_trappen', '-')}", ln=True)
+    pdf.cell(0, 7, f"Voorportalen: {'Ja' if project.get('voorportalen') else 'Nee'}", ln=True)
     pdf.ln(5)
 
     # Personen per verdieping
@@ -1072,12 +1072,12 @@ def genereer_word_rapport(resultaten, toetsingen):
     table.style = 'Table Grid'
 
     cells = [
-        ('Projectnaam', project['projectnaam']),
-        ('Projectnummer', project['projectnummer']),
-        ('Locatie', project['locatie']),
-        ('Datum', str(project['datum'])),
-        ('Aantal bouwlagen', str(project['aantal_bouwlagen'])),
-        ('Aantal trappenhuizen', str(project['aantal_trappen'])),
+        ('Projectnaam', project.get('projectnaam', '-')),
+        ('Datum', str(project.get('datum', '-'))),
+        ('Aantal bouwlagen', str(project.get('aantal_bouwlagen', '-'))),
+        ('Laagste verdieping', str(project.get('laagste_verdieping', 0))),
+        ('Aantal trappenhuizen', str(project.get('aantal_trappen', '-'))),
+        ('Voorportalen', 'Ja' if project.get('voorportalen') else 'Nee'),
     ]
 
     for i, (label, value) in enumerate(cells):
