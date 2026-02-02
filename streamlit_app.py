@@ -1050,7 +1050,7 @@ def genereer_pdf_rapport(resultaten, toetsingen):
     pdf.set_font('Helvetica', 'I', 9)
     pdf.cell(0, 6, f"Gegenereerd met Evacuatie Calculator - {date.today()}", ln=True)
 
-    return pdf.output()
+    return bytes(pdf.output())
 
 
 def genereer_word_rapport(resultaten, toetsingen):
