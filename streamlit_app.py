@@ -1103,20 +1103,29 @@ def genereer_pdf_rapport(resultaten, toetsingen):
     pdf.cell(0, 10, '5. Grafieken', ln=True)
     pdf.ln(5)
 
+    grafieken_gelukt = False
     try:
+        import plotly.io as pio
         # Evacuatie grafiek
         fig1 = maak_evacuatie_grafiek(resultaten)
-        img1_bytes = fig1.to_image(format="png", scale=2)
+        img1_bytes = pio.to_image(fig1, format="png", width=700, height=400, scale=2)
         pdf.image(io.BytesIO(img1_bytes), x=10, w=190)
         pdf.ln(10)
 
         # Trap bezetting grafiek
         fig2 = maak_trap_bezetting_grafiek(resultaten)
-        img2_bytes = fig2.to_image(format="png", scale=2)
+        img2_bytes = pio.to_image(fig2, format="png", width=700, height=400, scale=2)
         pdf.image(io.BytesIO(img2_bytes), x=10, w=190)
+        grafieken_gelukt = True
     except Exception as e:
+        error_msg = str(e)
         pdf.set_font('Helvetica', 'I', 10)
-        pdf.cell(0, 10, f"Grafieken konden niet worden gegenereerd: {str(e)}", ln=True)
+        pdf.cell(0, 7, "Grafieken konden niet worden gegenereerd.", ln=True)
+        pdf.cell(0, 7, f"Fout: {error_msg[:100]}", ln=True)
+        pdf.ln(5)
+        pdf.set_font('Helvetica', '', 9)
+        pdf.cell(0, 6, "De grafieken zijn wel beschikbaar in de web applicatie.", ln=True)
+        pdf.cell(0, 6, "Tip: maak screenshots van de grafieken in de browser.", ln=True)
 
     # AI Advies indien beschikbaar
     if st.session_state.get('ai_advies'):
@@ -1254,20 +1263,24 @@ def genereer_word_rapport(resultaten, toetsingen):
     doc.add_heading('5. Grafieken', level=1)
 
     try:
+        import plotly.io as pio
         # Evacuatie grafiek
         fig1 = maak_evacuatie_grafiek(resultaten)
-        img1_bytes = fig1.to_image(format="png", scale=2)
+        img1_bytes = pio.to_image(fig1, format="png", width=700, height=400, scale=2)
         doc.add_paragraph("Ontruimingsverloop - Cumulatief aantal personen buiten:")
         doc.add_picture(io.BytesIO(img1_bytes), width=Inches(6))
         doc.add_paragraph()
 
         # Trap bezetting grafiek
         fig2 = maak_trap_bezetting_grafiek(resultaten)
-        img2_bytes = fig2.to_image(format="png", scale=2)
+        img2_bytes = pio.to_image(fig2, format="png", width=700, height=400, scale=2)
         doc.add_paragraph("Bezetting trappenhuis over tijd:")
         doc.add_picture(io.BytesIO(img2_bytes), width=Inches(6))
     except Exception as e:
-        doc.add_paragraph(f"Grafieken konden niet worden gegenereerd: {str(e)}")
+        doc.add_paragraph("Grafieken konden niet worden gegenereerd.")
+        doc.add_paragraph(f"Fout: {str(e)[:100]}")
+        doc.add_paragraph()
+        doc.add_paragraph("De grafieken zijn wel beschikbaar in de web applicatie. Tip: maak screenshots van de grafieken in de browser.")
 
     # Tijdstap data per trap
     doc.add_page_break()
