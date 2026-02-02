@@ -169,7 +169,7 @@ def render_sidebar():
 
             if st.button(f"{icon} {i}. {stap_naam}", key=f"nav_{i}",
                         disabled=(i > st.session_state.stap + 1),
-                        use_container_width=True):
+                        width="stretch"):
                 st.session_state.stap = i
                 st.rerun()
 
@@ -187,7 +187,7 @@ def render_sidebar():
         st.markdown("### 📥 Project")
 
         # Download project als JSON
-        if st.button("💾 Project opslaan", use_container_width=True):
+        if st.button("💾 Project opslaan", width="stretch"):
             project_data = {
                 'project': st.session_state.project,
                 'personen': st.session_state.personen,
@@ -202,7 +202,7 @@ def render_sidebar():
                 data=json_str,
                 file_name=f"{st.session_state.project['projectnaam']}.json",
                 mime="application/json",
-                use_container_width=True
+                width="stretch"
             )
 
         # Upload project
@@ -286,7 +286,7 @@ def render_stap1_project():
     # Navigatie
     col1, col2, col3 = st.columns([1, 2, 1])
     with col3:
-        if st.button("Volgende ➡️", type="primary", use_container_width=True):
+        if st.button("Volgende ➡️", type="primary", width="stretch"):
             # Initialiseer personen als nodig
             laagste = st.session_state.project['laagste_verdieping']
             hoogste = laagste + st.session_state.project['aantal_bouwlagen'] - 1
@@ -368,11 +368,11 @@ def render_stap2_personen():
     # Navigatie
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Terug", use_container_width=True):
+        if st.button("⬅️ Terug", width="stretch"):
             st.session_state.stap = 1
             st.rerun()
     with col3:
-        if st.button("Volgende ➡️", type="primary", use_container_width=True):
+        if st.button("Volgende ➡️", type="primary", width="stretch"):
             if totaal == 0:
                 st.warning("Voer minimaal 1 persoon in!")
             else:
@@ -598,11 +598,11 @@ def render_stap3_trappen():
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Terug", use_container_width=True):
+        if st.button("⬅️ Terug", width="stretch"):
             st.session_state.stap = 2
             st.rerun()
     with col3:
-        if st.button("🧮 Bereken", type="primary", use_container_width=True):
+        if st.button("🧮 Bereken", type="primary", width="stretch"):
             with st.spinner("Berekening uitvoeren..."):
                 voer_berekening_uit()
             st.session_state.stap = 4
@@ -735,11 +735,11 @@ def render_stap4_resultaten():
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Terug", use_container_width=True):
+        if st.button("⬅️ Terug", width="stretch"):
             st.session_state.stap = 3
             st.rerun()
     with col2:
-        if st.button("🔄 Herbereken", use_container_width=True):
+        if st.button("🔄 Herbereken", width="stretch"):
             with st.spinner("Berekening uitvoeren..."):
                 voer_berekening_uit()
             st.rerun()
@@ -784,7 +784,7 @@ def render_grafieken(resultaten):
         hovermode="x unified"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # Tweede grafiek: personen in trap
     st.markdown("### 🚶 Personen in trappenhuis")
@@ -811,7 +811,7 @@ def render_grafieken(resultaten):
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width="stretch")
 
 
 def render_normtoetsing(toetsingen):
@@ -860,7 +860,7 @@ def render_details(resultaten):
                 }
                 data.append(row)
 
-            st.dataframe(data, use_container_width=True, height=400)
+            st.dataframe(data, width="stretch", height=400)
 
             # Download optie
             import pandas as pd
