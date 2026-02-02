@@ -856,7 +856,7 @@ def get_ai_advies(resultaten, toetsingen):
 
         genai.configure(api_key=api_key)
         # Probeer verschillende modellen als fallback
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         # Bouw context voor AI
         context = "Je bent een expert in brandveiligheid en evacuatieberekeningen volgens het Nederlandse Besluit bouwwerken leefomgeving (BBL).\n\n"
