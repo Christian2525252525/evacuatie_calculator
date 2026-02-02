@@ -947,6 +947,72 @@ def render_ai_advies(resultaten, toetsingen):
         st.caption("*Dit advies is gegenereerd door AI en dient ter indicatie. Raadpleeg altijd een gekwalificeerd adviseur voor definitieve beslissingen.*")
 
 
+def maak_evacuatie_grafiek(resultaten):
+    """Maak de cumulatieve evacuatie grafiek"""
+    fig = go.Figure()
+    colors = px.colors.qualitative.Set2
+
+    for i, (trap_naam, res) in enumerate(resultaten.items()):
+        tijden = [ts.tijd_min for ts in res.tijdstappen]
+        buiten = [ts.cumulatief_buiten for ts in res.tijdstappen]
+
+        fig.add_trace(go.Scatter(
+            x=tijden,
+            y=buiten,
+            mode='lines+markers',
+            name=trap_naam,
+            line=dict(color=colors[i % len(colors)], width=2),
+            marker=dict(size=4)
+        ))
+
+        fig.add_hline(
+            y=res.totaal_personen,
+            line_dash="dash",
+            line_color=colors[i % len(colors)],
+            annotation_text=f"{trap_naam}: {res.totaal_personen}",
+            annotation_position="right"
+        )
+
+    fig.update_layout(
+        title="Cumulatief aantal personen buiten",
+        xaxis_title="Tijd (minuten)",
+        yaxis_title="Aantal personen",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        width=700,
+        height=400
+    )
+    return fig
+
+
+def maak_trap_bezetting_grafiek(resultaten):
+    """Maak de trap bezetting grafiek"""
+    fig = go.Figure()
+    colors = px.colors.qualitative.Set2
+
+    for i, (trap_naam, res) in enumerate(resultaten.items()):
+        tijden = [ts.tijd_min for ts in res.tijdstappen]
+        in_trap = [ts.totaal_in_trap for ts in res.tijdstappen]
+
+        fig.add_trace(go.Scatter(
+            x=tijden,
+            y=in_trap,
+            mode='lines',
+            name=trap_naam,
+            fill='tozeroy',
+            line=dict(color=colors[i % len(colors)])
+        ))
+
+    fig.update_layout(
+        title="Personen in trappenhuis over tijd",
+        xaxis_title="Tijd (minuten)",
+        yaxis_title="Aantal personen in trap",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        width=700,
+        height=400
+    )
+    return fig
+
+
 def genereer_pdf_rapport(resultaten, toetsingen):
     """Genereer een PDF rapport van de evacuatieberekening"""
     pdf = FPDF()
@@ -1031,11 +1097,32 @@ def genereer_pdf_rapport(resultaten, toetsingen):
                 pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
 
+    # Grafieken
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, '5. Grafieken', ln=True)
+    pdf.ln(5)
+
+    try:
+        # Evacuatie grafiek
+        fig1 = maak_evacuatie_grafiek(resultaten)
+        img1_bytes = fig1.to_image(format="png", scale=2)
+        pdf.image(io.BytesIO(img1_bytes), x=10, w=190)
+        pdf.ln(10)
+
+        # Trap bezetting grafiek
+        fig2 = maak_trap_bezetting_grafiek(resultaten)
+        img2_bytes = fig2.to_image(format="png", scale=2)
+        pdf.image(io.BytesIO(img2_bytes), x=10, w=190)
+    except Exception as e:
+        pdf.set_font('Helvetica', 'I', 10)
+        pdf.cell(0, 10, f"Grafieken konden niet worden gegenereerd: {str(e)}", ln=True)
+
     # AI Advies indien beschikbaar
     if st.session_state.get('ai_advies'):
         pdf.add_page()
         pdf.set_font('Helvetica', 'B', 14)
-        pdf.cell(0, 10, '5. AI Advies', ln=True)
+        pdf.cell(0, 10, '6. AI Advies', ln=True)
         pdf.set_font('Helvetica', '', 10)
 
         # Split advies in regels en voeg toe
@@ -1162,9 +1249,29 @@ def genereer_word_rapport(resultaten, toetsingen):
 
         doc.add_paragraph()
 
+    # Grafieken
+    doc.add_page_break()
+    doc.add_heading('5. Grafieken', level=1)
+
+    try:
+        # Evacuatie grafiek
+        fig1 = maak_evacuatie_grafiek(resultaten)
+        img1_bytes = fig1.to_image(format="png", scale=2)
+        doc.add_paragraph("Ontruimingsverloop - Cumulatief aantal personen buiten:")
+        doc.add_picture(io.BytesIO(img1_bytes), width=Inches(6))
+        doc.add_paragraph()
+
+        # Trap bezetting grafiek
+        fig2 = maak_trap_bezetting_grafiek(resultaten)
+        img2_bytes = fig2.to_image(format="png", scale=2)
+        doc.add_paragraph("Bezetting trappenhuis over tijd:")
+        doc.add_picture(io.BytesIO(img2_bytes), width=Inches(6))
+    except Exception as e:
+        doc.add_paragraph(f"Grafieken konden niet worden gegenereerd: {str(e)}")
+
     # Tijdstap data per trap
     doc.add_page_break()
-    doc.add_heading('5. Gedetailleerde tijdstapdata', level=1)
+    doc.add_heading('6. Gedetailleerde tijdstapdata', level=1)
 
     for trap_naam, res in resultaten.items():
         doc.add_heading(trap_naam, level=2)
@@ -1193,7 +1300,7 @@ def genereer_word_rapport(resultaten, toetsingen):
     # AI Advies indien beschikbaar
     if st.session_state.get('ai_advies'):
         doc.add_page_break()
-        doc.add_heading('6. AI Advies', level=1)
+        doc.add_heading('7. AI Advies', level=1)
         doc.add_paragraph(st.session_state.ai_advies)
         doc.add_paragraph()
         disclaimer = doc.add_paragraph("Dit advies is gegenereerd door AI en dient ter indicatie. Raadpleeg altijd een gekwalificeerd adviseur voor definitieve beslissingen.")
