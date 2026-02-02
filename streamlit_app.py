@@ -855,7 +855,8 @@ def get_ai_advies(resultaten, toetsingen):
             return None, "API key niet geconfigureerd. Voeg GOOGLE_API_KEY toe aan Streamlit Secrets."
 
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Probeer verschillende modellen als fallback
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
         # Bouw context voor AI
         context = "Je bent een expert in brandveiligheid en evacuatieberekeningen volgens het Nederlandse Besluit bouwwerken leefomgeving (BBL).\n\n"
