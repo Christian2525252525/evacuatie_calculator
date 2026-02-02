@@ -305,6 +305,10 @@ def render_stap2_personen():
     laagste = st.session_state.project['laagste_verdieping']
     hoogste = laagste + st.session_state.project['aantal_bouwlagen'] - 1
 
+    # Initialiseer reset counter als die niet bestaat
+    if 'personen_reset_counter' not in st.session_state:
+        st.session_state.personen_reset_counter = 0
+
     st.markdown("""
     <div class="info-box">
         Voer het aantal personen in per verdieping.
@@ -317,17 +321,19 @@ def render_stap2_personen():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        default_personen = st.number_input("Standaard per verdieping", min_value=0, value=50)
+        default_personen = st.number_input("Standaard per verdieping", min_value=0, value=50, key="default_pers")
     with col2:
         if st.button("Toepassen op alle verdiepingen"):
             for v in range(hoogste, laagste - 1, -1):
                 if v != 0:  # Skip begane grond
                     st.session_state.personen[str(v)] = default_personen
+            st.session_state.personen_reset_counter += 1
             st.rerun()
     with col3:
         if st.button("Reset naar 0"):
             for v in range(hoogste, laagste - 1, -1):
                 st.session_state.personen[str(v)] = 0
+            st.session_state.personen_reset_counter += 1
             st.rerun()
 
     st.markdown("---")
@@ -335,6 +341,9 @@ def render_stap2_personen():
 
     # Maak kolommen voor invoer
     cols = st.columns(4)
+
+    # Gebruik counter in key zodat widgets opnieuw worden aangemaakt na reset
+    counter = st.session_state.personen_reset_counter
 
     for i, v in enumerate(range(hoogste, laagste - 1, -1)):
         col_idx = i % 4
@@ -345,7 +354,7 @@ def render_stap2_personen():
                 min_value=0,
                 max_value=1000,
                 value=st.session_state.personen.get(str(v), 0),
-                key=f"pers_{v}"
+                key=f"pers_{v}_{counter}"
             )
 
     # Totaal
