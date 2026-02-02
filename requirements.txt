@@ -5,7 +5,7 @@ pandas
 google-generativeai
 fpdf2
 python-docx
-kaleido
+matplotlib
 
 # Voor lokale desktop versie (PyQt6) - niet nodig voor web:
 # pip install PyQt6 PyQt6-Charts openpyxl reportlab matplotlib

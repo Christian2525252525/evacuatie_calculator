@@ -1013,6 +1013,79 @@ def maak_trap_bezetting_grafiek(resultaten):
     return fig
 
 
+def maak_evacuatie_grafiek_matplotlib(resultaten):
+    """Maak de cumulatieve evacuatie grafiek met matplotlib voor export"""
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')  # Non-interactive backend
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854']
+
+    for i, (trap_naam, res) in enumerate(resultaten.items()):
+        tijden = [ts.tijd_min for ts in res.tijdstappen]
+        buiten = [ts.cumulatief_buiten for ts in res.tijdstappen]
+        color = colors[i % len(colors)]
+
+        ax.plot(tijden, buiten, '-o', label=trap_naam, color=color, linewidth=2, markersize=3)
+        ax.axhline(y=res.totaal_personen, linestyle='--', color=color, alpha=0.7)
+        ax.annotate(f'{trap_naam}: {res.totaal_personen}',
+                   xy=(max(tijden) * 0.95, res.totaal_personen),
+                   fontsize=9, color=color)
+
+    ax.set_xlabel('Tijd (minuten)', fontsize=11)
+    ax.set_ylabel('Aantal personen', fontsize=11)
+    ax.set_title('Cumulatief aantal personen buiten', fontsize=13, fontweight='bold')
+    ax.legend(loc='upper left')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+
+    plt.tight_layout()
+
+    # Save to bytes
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    buf.seek(0)
+    plt.close(fig)
+    return buf.getvalue()
+
+
+def maak_trap_bezetting_grafiek_matplotlib(resultaten):
+    """Maak de trap bezetting grafiek met matplotlib voor export"""
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')  # Non-interactive backend
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    colors = ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854']
+
+    for i, (trap_naam, res) in enumerate(resultaten.items()):
+        tijden = [ts.tijd_min for ts in res.tijdstappen]
+        in_trap = [ts.totaal_in_trap for ts in res.tijdstappen]
+        color = colors[i % len(colors)]
+
+        ax.fill_between(tijden, in_trap, alpha=0.4, color=color)
+        ax.plot(tijden, in_trap, '-', label=trap_naam, color=color, linewidth=2)
+
+    ax.set_xlabel('Tijd (minuten)', fontsize=11)
+    ax.set_ylabel('Aantal personen in trap', fontsize=11)
+    ax.set_title('Personen in trappenhuis over tijd', fontsize=13, fontweight='bold')
+    ax.legend(loc='upper right')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+
+    plt.tight_layout()
+
+    # Save to bytes
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    buf.seek(0)
+    plt.close(fig)
+    return buf.getvalue()
+
+
 def genereer_pdf_rapport(resultaten, toetsingen):
     """Genereer een PDF rapport van de evacuatieberekening"""
     pdf = FPDF()
@@ -1103,20 +1176,19 @@ def genereer_pdf_rapport(resultaten, toetsingen):
     pdf.cell(0, 10, '5. Grafieken', ln=True)
     pdf.ln(5)
 
-    grafieken_gelukt = False
     try:
-        import plotly.io as pio
-        # Evacuatie grafiek
-        fig1 = maak_evacuatie_grafiek(resultaten)
-        img1_bytes = pio.to_image(fig1, format="png", width=700, height=400, scale=2)
+        # Evacuatie grafiek (matplotlib)
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, 'Ontruimingsverloop - Cumulatief aantal personen buiten:', ln=True)
+        img1_bytes = maak_evacuatie_grafiek_matplotlib(resultaten)
         pdf.image(io.BytesIO(img1_bytes), x=10, w=190)
         pdf.ln(10)
 
-        # Trap bezetting grafiek
-        fig2 = maak_trap_bezetting_grafiek(resultaten)
-        img2_bytes = pio.to_image(fig2, format="png", width=700, height=400, scale=2)
+        # Trap bezetting grafiek (matplotlib)
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, 'Bezetting trappenhuis over tijd:', ln=True)
+        img2_bytes = maak_trap_bezetting_grafiek_matplotlib(resultaten)
         pdf.image(io.BytesIO(img2_bytes), x=10, w=190)
-        grafieken_gelukt = True
     except Exception as e:
         error_msg = str(e)
         pdf.set_font('Helvetica', 'I', 10)
@@ -1125,7 +1197,6 @@ def genereer_pdf_rapport(resultaten, toetsingen):
         pdf.ln(5)
         pdf.set_font('Helvetica', '', 9)
         pdf.cell(0, 6, "De grafieken zijn wel beschikbaar in de web applicatie.", ln=True)
-        pdf.cell(0, 6, "Tip: maak screenshots van de grafieken in de browser.", ln=True)
 
     # AI Advies indien beschikbaar
     if st.session_state.get('ai_advies'):
@@ -1263,24 +1334,21 @@ def genereer_word_rapport(resultaten, toetsingen):
     doc.add_heading('5. Grafieken', level=1)
 
     try:
-        import plotly.io as pio
-        # Evacuatie grafiek
-        fig1 = maak_evacuatie_grafiek(resultaten)
-        img1_bytes = pio.to_image(fig1, format="png", width=700, height=400, scale=2)
+        # Evacuatie grafiek (matplotlib)
         doc.add_paragraph("Ontruimingsverloop - Cumulatief aantal personen buiten:")
+        img1_bytes = maak_evacuatie_grafiek_matplotlib(resultaten)
         doc.add_picture(io.BytesIO(img1_bytes), width=Inches(6))
         doc.add_paragraph()
 
-        # Trap bezetting grafiek
-        fig2 = maak_trap_bezetting_grafiek(resultaten)
-        img2_bytes = pio.to_image(fig2, format="png", width=700, height=400, scale=2)
+        # Trap bezetting grafiek (matplotlib)
         doc.add_paragraph("Bezetting trappenhuis over tijd:")
+        img2_bytes = maak_trap_bezetting_grafiek_matplotlib(resultaten)
         doc.add_picture(io.BytesIO(img2_bytes), width=Inches(6))
     except Exception as e:
         doc.add_paragraph("Grafieken konden niet worden gegenereerd.")
         doc.add_paragraph(f"Fout: {str(e)[:100]}")
         doc.add_paragraph()
-        doc.add_paragraph("De grafieken zijn wel beschikbaar in de web applicatie. Tip: maak screenshots van de grafieken in de browser.")
+        doc.add_paragraph("De grafieken zijn wel beschikbaar in de web applicatie.")
 
     # Tijdstap data per trap
     doc.add_page_break()
