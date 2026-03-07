@@ -20,6 +20,7 @@ class TrapVerdieping:
     verdieping: int
     doorgang_naar_trap_m: float = STANDAARD_DOORGANG_BREEDTE
     type_doorgang: DoorgangType = DoorgangType.ENKELE_DEUR_LT135  # BBL 4.80 lid d: 110 pers/m
+    aantal_deuren_naar_trap: int = 1  # Aantal aparte deuren naar trappenhuis op deze verdieping
     oppervlakte_bordes_m2: float = STANDAARD_BORDES_OPP
     oppervlakte_tussenbordessen_m2: float = STANDAARD_TUSSENBORDES_OPP
     hoogteverschil_m: float = STANDAARD_HOOGTEVERSCHIL
@@ -58,6 +59,7 @@ class TrapVerdieping:
             verdieping=self.verdieping,
             doorgang_naar_trap_m=self.doorgang_naar_trap_m,
             type_doorgang=self.type_doorgang,
+            aantal_deuren_naar_trap=self.aantal_deuren_naar_trap,
             oppervlakte_bordes_m2=self.oppervlakte_bordes_m2,
             oppervlakte_tussenbordessen_m2=self.oppervlakte_tussenbordessen_m2,
             hoogteverschil_m=self.hoogteverschil_m,
@@ -86,6 +88,7 @@ class Trap:
     # Uitgang eigenschappen
     doorgang_uitgang_m: float = STANDAARD_DOORGANG_BREEDTE
     type_uitgang: DoorgangType = DoorgangType.ENKELE_DEUR_LT135  # BBL 4.80 lid d
+    aantal_deuren_uitgang: int = 1  # Aantal aparte deuren bij uitgang trappenhuis
     verdiepingen_onder_uitgang: int = 0
 
     # Voorportaal globaal
@@ -160,6 +163,7 @@ class Trap:
             if v.verdieping != bron_verdieping.verdieping:
                 v.doorgang_naar_trap_m = bron_verdieping.doorgang_naar_trap_m
                 v.type_doorgang = bron_verdieping.type_doorgang
+                v.aantal_deuren_naar_trap = bron_verdieping.aantal_deuren_naar_trap
                 v.oppervlakte_bordes_m2 = bron_verdieping.oppervlakte_bordes_m2
                 v.oppervlakte_tussenbordessen_m2 = bron_verdieping.oppervlakte_tussenbordessen_m2
                 v.hoogteverschil_m = bron_verdieping.hoogteverschil_m

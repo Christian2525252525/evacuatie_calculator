@@ -404,6 +404,7 @@ def init_trappen():
                 'verlaat_tijd': 'STANDAARD',
                 'doorgang_uitgang': 0.9,
                 'type_uitgang': 'ENKELE_DEUR_LT135',
+                'aantal_deuren_uitgang': 1,
                 'verdiepingen_onder_uitgang': 0,
                 'verdiepingen': {}
             }
@@ -413,6 +414,7 @@ def init_trappen():
                 st.session_state.trappen[trap_key]['verdiepingen'][str(v)] = {
                     'doorgang_trap': STANDAARD_DOORGANG_BREEDTE,
                     'type_doorgang': 'ENKELE_DEUR_LT135',
+                    'aantal_deuren_trap': 1,
                     'bordes': STANDAARD_BORDES_OPP,
                     'tussenbordes': STANDAARD_TUSSENBORDES_OPP,
                     'hoogteverschil': STANDAARD_HOOGTEVERSCHIL,
@@ -493,6 +495,17 @@ def render_stap3_trappen():
             key=f"type_uitgang_{geselecteerde_trap}"
         )
 
+        trap_data['aantal_deuren_uitgang'] = st.number_input(
+            "Aantal uitgangsdeuren",
+            min_value=1,
+            max_value=4,
+            value=int(trap_data.get('aantal_deuren_uitgang', 1)),
+            step=1,
+            help="Aantal aparte deuren bij de uitgang van het trappenhuis (BG). "
+                 "FE_cap = aantal × (factor × breedte).",
+            key=f"ndeuren_uitgang_{geselecteerde_trap}"
+        )
+
         trap_data['verdiepingen_onder_uitgang'] = st.number_input(
             "Verdiepingen onder uitgang",
             min_value=0,
@@ -560,6 +573,18 @@ def render_stap3_trappen():
             format_func=lambda x: doorgang_opties[x],
             index=list(doorgang_opties.keys()).index(verd_data.get('type_doorgang', 'ENKELE_DEUR_LT135')),
             key=f"type_{geselecteerde_trap}_{geselecteerde_verd}"
+        )
+
+        verd_data['aantal_deuren_trap'] = st.number_input(
+            "Aantal deuren naar trap",
+            min_value=1,
+            max_value=4,
+            value=int(verd_data.get('aantal_deuren_trap', 1)),
+            step=1,
+            help="Aantal aparte deuren op deze verdieping die toegang geven tot het trappenhuis. "
+                 "Elke deur heeft dezelfde breedte en hetzelfde type. "
+                 "FX_cap = aantal × (factor × breedte).",
+            key=f"ndeuren_{geselecteerde_trap}_{geselecteerde_verd}"
         )
 
     with col2:
@@ -674,6 +699,7 @@ def voer_berekening_uit():
             verlaat_tijd_type=verlaat_tijd,
             doorgang_uitgang_m=trap_data['doorgang_uitgang'],
             type_uitgang=type_uitgang,
+            aantal_deuren_uitgang=int(trap_data.get('aantal_deuren_uitgang', 1)),
             verdiepingen_onder_uitgang=int(trap_data.get('verdiepingen_onder_uitgang', 0)),
         )
 
@@ -688,6 +714,7 @@ def voer_berekening_uit():
                 verdieping=verd_nr,
                 doorgang_naar_trap_m=verd_data['doorgang_trap'],
                 type_doorgang=type_doorgang,
+                aantal_deuren_naar_trap=int(verd_data.get('aantal_deuren_trap', 1)),
                 oppervlakte_bordes_m2=verd_data['bordes'],
                 oppervlakte_tussenbordessen_m2=verd_data['tussenbordes'],
                 hoogteverschil_m=verd_data['hoogteverschil'],
@@ -915,7 +942,7 @@ def get_ai_advies(resultaten, toetsingen):
                     fy_cap = v._doorstroomcap_trap or 0
                     context += (
                         f"  Verdieping {v.verdieping}: {v.aantal_personen} pers, "
-                        f"trap {v.breedte_trap_m}m breed, deur {v.doorgang_naar_trap_m}m, "
+                        f"trap {v.breedte_trap_m}m breed, {v.aantal_deuren_naar_trap}x deur {v.doorgang_naar_trap_m}m, "
                         f"opslagcap={opslagcap:.0f} pers, FX(deur)={fx_cap:.1f}/stap, FY(trap)={fy_cap:.1f}/stap\n"
                     )
 

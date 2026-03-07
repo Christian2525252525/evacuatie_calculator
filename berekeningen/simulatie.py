@@ -94,10 +94,10 @@ class SimulatieEngine:
     def _bereken_capaciteiten(self):
         """Bereken alle capaciteiten voor alle verdiepingen"""
         for v in self.trap.verdiepingen:
-            # Doorstroomcapaciteit deur naar trap
+            # Doorstroomcapaciteit deur naar trap (× aantal deuren)
             v._doorstroomcap_deur = bereken_doorstroomcapaciteit_deur(
                 v.doorgang_naar_trap_m, v.type_doorgang
-            )
+            ) * v.aantal_deuren_naar_trap
             
             # Doorstroomcapaciteit trap
             v._doorstroomcap_trap = bereken_doorstroomcapaciteit_trap(
@@ -121,10 +121,10 @@ class SimulatieEngine:
                 v.voorportaal_actief
             )
         
-        # Doorstroomcapaciteit uitgang
+        # Doorstroomcapaciteit uitgang (× aantal deuren)
         self.trap._doorstroomcap_uitgang = bereken_doorstroomcapaciteit_deur(
             self.trap.doorgang_uitgang_m, self.trap.type_uitgang
-        )
+        ) * self.trap.aantal_deuren_uitgang
     
     def _initialiseer_state(self):
         """Initialiseer simulatie state"""
