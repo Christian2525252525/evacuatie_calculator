@@ -893,29 +893,63 @@ def get_ai_advies(resultaten, toetsingen):
             context += f"- Status: {'VOLDOET' if toets.alle_criteria_voldaan else 'VOLDOET NIET'}\n\n"
 
             for criterium in toets.criteria:
-                status = "✅" if criterium.voldoet else "❌"
-                context += f"  {status} {criterium.naam}: eis={criterium.eis}, berekend={criterium.berekend:.1f}\n"
+                status = "VOLDOET" if criterium.voldoet else "VOLDOET NIET"
+                context += f"  [{status}] {criterium.naam}: eis={criterium.eis} min, berekend={criterium.berekend:.1f} min\n"
                 if not criterium.voldoet:
                     context += f"     Probleem: {criterium.toelichting}\n"
             context += "\n"
 
-        # Voeg trap configuratie toe
-        if 'trappen' in st.session_state:
-            context += "## Trap Configuratie\n"
-            for trap_naam, trap_data in st.session_state.trappen.items():
-                context += f"### {trap_naam}\n"
-                context += f"- Uitgang breedte: {trap_data.get('doorgang_uitgang', 'onbekend')}m\n"
-                context += f"- Type vluchtroute: {trap_data.get('locatie', 'onbekend')}\n"
+        # Voeg uitgebreide trap configuratie en capaciteiten toe
+        project_obj = st.session_state.get('project_obj')
+        if project_obj:
+            context += "## Trap Configuratie en Capaciteiten\n"
+            for trap in project_obj.trappen:
+                context += f"### {trap.aanduiding}\n"
+                context += f"- Uitgang breedte: {trap.doorgang_uitgang_m}m, type: {trap.type_uitgang.value}\n"
+                context += f"- Type vluchtroute: {trap.locatie.value} ({trap.ontruimingstijd_min} min)\n"
+                context += f"- Uitgang doorstroomcap: {trap._doorstroomcap_uitgang:.1f} pers/tijdstap\n"
+                context += f"- Verdiepingen ({len(trap.verdiepingen)}x):\n"
+                for v in sorted(trap.verdiepingen, key=lambda x: x.verdieping, reverse=True):
+                    opslagcap = v._opslagcapaciteit or 0
+                    fx_cap = v._doorstroomcap_deur or 0
+                    fy_cap = v._doorstroomcap_trap or 0
+                    context += (
+                        f"  Verdieping {v.verdieping}: {v.aantal_personen} pers, "
+                        f"trap {v.breedte_trap_m}m breed, deur {v.doorgang_naar_trap_m}m, "
+                        f"opslagcap={opslagcap:.0f} pers, FX(deur)={fx_cap:.1f}/stap, FY(trap)={fy_cap:.1f}/stap\n"
+                    )
 
         prompt = context + """
 
+## Regels voor correct advies
+
+**Lid 2 (eis: 1,0 min) - cascade-opstopping** ("Opstopping in trappenhuis" in de probleemomschrijving):
+- OORZAAK: de trap-sectie raakt vol door instroom van meerdere verdiepingen tegelijk; lagere secties kunnen niet snel genoeg doorstromen.
+- WAT HELPT: (1) vergroot de trapbreedte (hogere FY_cap en opslagcap), (2) vergroot bordes/tussenbordes oppervlak, (3) vergroot uitgangsbreedte, (4) verklein het totaal aantal personen over ALLE verdiepingen.
+- WAT NIET HELPT: het verminderen van personen op slechts één verdieping lost een cascade-opstopping NIET op als andere verdiepingen de trap al vollopen.
+
+**Lid 2 (eis: 1,0 min) - doorstroomcapaciteit deur**:
+- OORZAAK: de deur naar het trappenhuis is te smal voor het aantal personen op die verdieping.
+- WAT HELPT: verbreed de toegangsdeur naar het trappenhuis.
+
+**Lid 2 (eis: 1,0 min) - opslagcapaciteit trappenhuis**:
+- OORZAAK: het trappenhuis kan het aantal personen van die verdieping niet tegelijk opvangen.
+- WAT HELPT: vergroot bordes/tussenbordessen of verhoog het aantal treden.
+
+**Lid 1 (totale ontruiming)**:
+- Verminderen van personen op één specifieke verdieping kan helpen als die verdieping de bottleneck is.
+- Alternatief: vergroot uitgang, vergroot trapbreedte, of kies een langere ontruimingstijd (ander vluchtroute-type).
+
+**Lid 3 (eis: 3,5 of 6 min)**:
+- Zelfde oplossingen als lid 2, maar ruimer.
+
 Geef concreet advies in het Nederlands:
 1. Samenvatting: voldoet het ontwerp aan BBL Art. 4.81?
-2. Als er problemen zijn: wat zijn de specifieke knelpunten?
-3. Concrete oplossingen met geschatte impact (bijv. "verbreed deur van 0.85m naar 1.2m = +40% capaciteit")
-4. Prioritering: wat heeft de meeste impact?
+2. Als er problemen zijn: benoem het type knelpunt per criterium (cascade-opstopping / te smalle deur / te weinig opslag).
+3. Concrete oplossingen die het probleem daadwerkelijk oplossen, met geschatte impact.
+4. Vermeld expliciet welke maatregelen NIET helpen als dat van toepassing is.
 
-Houd het praktisch en beknopt (max 300 woorden)."""
+Houd het praktisch en beknopt (max 350 woorden)."""
 
         response = model.generate_content(prompt)
         return response.text, None
