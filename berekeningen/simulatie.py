@@ -238,7 +238,13 @@ class SimulatieEngine:
             lagere_v = self._get_verdieping(lagere_verd)
             if lagere_v:
                 bezetting_lager = self.personen_in_trap.get(lagere_verd, 0.0)
-                ruimte_lager = max(0.0, lagere_v._opslagcapaciteit - bezetting_lager)
+                if lagere_verd == uitgang_verd:
+                    # Uitgang niveau: cascade model - gebruik FE_cap als capaciteitsgrens
+                    # ipv opslagcap van het bordes. Personen stromen direct door naar de
+                    # uitgang, beperkt door de breedte van de uitgangsdeur (BBL cascade).
+                    ruimte_lager = max(0.0, self.trap._doorstroomcap_uitgang - bezetting_lager)
+                else:
+                    ruimte_lager = max(0.0, lagere_v._opslagcapaciteit - bezetting_lager)
                 doorstroom = min(doorstroom, ruimte_lager)
 
             # Update bezettingen

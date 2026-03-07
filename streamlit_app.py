@@ -332,8 +332,7 @@ def render_stap2_personen():
     with col2:
         if st.button("Toepassen op alle verdiepingen"):
             for v in range(hoogste, laagste - 1, -1):
-                if v != 0:  # Skip begane grond
-                    st.session_state.personen[str(v)] = default_personen
+                st.session_state.personen[str(v)] = default_personen
             st.session_state.personen_reset_counter += 1
             st.rerun()
     with col3:
@@ -405,6 +404,7 @@ def init_trappen():
                 'verlaat_tijd': 'STANDAARD',
                 'doorgang_uitgang': 0.9,
                 'type_uitgang': 'ENKELE_DEUR_LT135',
+                'verdiepingen_onder_uitgang': 0,
                 'verdiepingen': {}
             }
 
@@ -491,6 +491,18 @@ def render_stap3_trappen():
             format_func=lambda x: uitgang_opties[x],
             index=list(uitgang_opties.keys()).index(trap_data.get('type_uitgang', 'ENKELE_DEUR_LT135')),
             key=f"type_uitgang_{geselecteerde_trap}"
+        )
+
+        trap_data['verdiepingen_onder_uitgang'] = st.number_input(
+            "Verdiepingen onder uitgang",
+            min_value=0,
+            max_value=10,
+            value=int(trap_data.get('verdiepingen_onder_uitgang', 0)),
+            step=1,
+            help="Aantal bouwlagen tussen maaiveld en de uitgang van het trappenhuis. "
+                 "0 = uitgang op begane grond (verdieping 0), "
+                 "1 = uitgang op verdieping -1 (bijv. bij souterrain), etc.",
+            key=f"vdu_{geselecteerde_trap}"
         )
 
     st.markdown("---")
@@ -662,6 +674,7 @@ def voer_berekening_uit():
             verlaat_tijd_type=verlaat_tijd,
             doorgang_uitgang_m=trap_data['doorgang_uitgang'],
             type_uitgang=type_uitgang,
+            verdiepingen_onder_uitgang=int(trap_data.get('verdiepingen_onder_uitgang', 0)),
         )
 
         # Bouw verdiepingen
